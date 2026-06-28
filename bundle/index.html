@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitProject Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>GitProject Analyzer</h1>
+      <p>Analyze any open-source GitHub repository with AI</p>
+    </header>
+    
+    <main>
+      <div class="input-section glass-panel">
+        <input type="text" id="repo-url" placeholder="https://github.com/owner/repo" />
+        <button id="analyze-btn">Analyze Repository</button>
+      </div>
+
+      <div class="loading-state" id="loading-state" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loading-text">Fetching repository data...</p>
+      </div>
+
+      <div class="results-section glass-panel" id="results-section" style="display: none;">
+        <div class="repo-header">
+          <h2 id="repo-name"></h2>
+          <p id="repo-description"></p>
+        </div>
+        <div class="analysis-content" id="analysis-content"></div>
+      </div>
+      
+      <div class="error-section glass-panel" id="error-section" style="display: none;">
+        <p id="error-message"></p>
+      </div>
+    </main>
+  </div>
+  
+  <script src="anna-tool-ids.js"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

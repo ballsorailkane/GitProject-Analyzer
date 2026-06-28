@@ -1,0 +1,13 @@
+{
+  "slug": "gitlensanalyzer",
+  "name": "GitProject Analyzer",
+  "version": "0.1.0",
+  "tagline": "Analyze any open source repository with AI.",
+  "category": "developer-tools",
+  "pricing_model": "free",
+  "bundled_executas": {
+    "github-fetcher": {
+      "path": "./executas/github-fetcher"
+    }
+  }
+}

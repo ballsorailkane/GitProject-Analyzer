@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tool-gitproject-analyzer-github-fetcher-1"
+version = "0.1.0"
+description = "Fetches github data for GitProject Analyzer"
+requires-python = ">=3.11"
+dependencies = [
+    "requests",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["github_fetcher.py"]
+
+[project.scripts]
+"tool-gitproject-analyzer-github-fetcher-1" = "github_fetcher:main"

@@ -1,0 +1,9 @@
+{
+  "slug": "github-fetcher",
+  "name": "GitHub Fetcher Tool",
+  "version": "0.1.0",
+  "executa_type": "tool",
+  "tool_id": "tool-gitproject-analyzer-github-fetcher-1",
+  "type": "python",
+  "enabled": true
+}

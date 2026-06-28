@@ -1,0 +1,38 @@
+{
+  "schema": 2,
+  "permissions": [
+    "tools.invoke"
+  ],
+  "required_executas": [
+    {
+      "tool_id": "bundled:github-fetcher",
+      "min_version": "0.1.0",
+      "version": "latest"
+    }
+  ],
+  "system_prompt_addendum": "The user is using GitProject Analyzer. The app provides repository context from github and requires you to explain the open-source project clearly, providing concise, accurate explanations and actionable setup instructions.",
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html",
+      "external_origins": []
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "GitProject Analyzer",
+        "default": true,
+        "entry": "index.html",
+        "min_size": { "w": 460, "h": 600 },
+        "default_size": { "w": 800, "h": 800 },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true
+      }
+    ],
+    "host_api": {
+      "llm": ["complete"],
+      "window": ["set_title"]
+    }
+  }
+}

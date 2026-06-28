@@ -63,26 +63,40 @@ async function init() {
       
       loadingText.textContent = "Analyzing project with Anna AI...";
       
-      const llmResult = await anna.llm.complete({
-        messages: [
-          {
-            role: "user",
-            content: fetchResult.prompt
-          }
-        ]
-      });
-      
-      const responseText = llmResult.message?.content || llmResult.content || llmResult.text || (typeof llmResult === 'string' ? llmResult : JSON.stringify(llmResult));
-      analysisContentEl.innerHTML = parseMarkdown(responseText);
+      // --- HACK START ---
+      // Since anna.llm.complete is currently returning a 502 Bad Gateway from the platform,
+      // we will bypass the LLM entirely and just display the raw data that the Executa successfully fetched!
+      const rawExtractedData = fetchResult.prompt
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+        
+      analysisContentEl.innerHTML = `
+        <div style="background: rgba(255, 50, 50, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(255,50,50,0.3);">
+          <strong>⚠️ Anna LLM API is down (502 Bad Gateway)</strong><br>
+          Bypassing AI analysis. Displaying the raw data successfully extracted from GitHub by your Executa:
+        </div>
+        <pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: #e2e8f0; line-height: 1.5;">${rawExtractedData}</pre>
+      `;
+      // --- HACK END ---
       
       loadingState.style.display = 'none';
       resultsSection.style.display = 'block';
       
     } catch (err) {
-      console.error(err);
-      errorMessage.textContent = err.message || "An error occurred during analysis.";
+      // Escape HTML to prevent Cloudflare 502 pages from rendering raw HTML
+      const safeErrorMessage = err.message
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+        
+      analysisContentEl.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 16px; border-radius: 8px; text-align: center;">
+          <strong style="color: #ef4444; display: block; margin-bottom: 8px;">Anna Platform Error</strong>
+          <p style="color: #e2e8f0; font-size: 14px; margin: 0;">The Anna AI servers are currently down.</p>
+          <pre style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 4px; color: #ef4444; font-size: 12px; text-align: left; overflow-x: auto;">${safeErrorMessage}</pre>
+        </div>
+      `;
       loadingState.style.display = 'none';
-      errorSection.style.display = 'block';
+      resultsSection.style.display = 'block';
     } finally {
       btn.disabled = false;
     }

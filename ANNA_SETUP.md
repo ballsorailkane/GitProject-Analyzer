@@ -1,8 +1,271 @@
-# Anna Development Journey & Setup Guide
+# Anna Platform Guide & GitProject Analyzer Setup
 
-This document is the complete record of building, debugging, and publishing the **GitProject Analyzer** Anna App — from first `npm install` to final `submit-review`.
+This document covers two things:
+1. **Part A** — A general guide to the Anna platform: what it is, how to set it up, and how to build apps for it.
+2. **Part B** — The complete record of building, debugging, and publishing the **GitProject Analyzer** app on Anna.
 
 ---
+
+# Part A: Understanding the Anna Platform
+
+## What is Anna?
+
+Anna is an **AI-native application platform**. Think of it as an app store, but every app has built-in access to powerful AI models (LLMs) — for free. Developers build small, focused apps that run inside the Anna desktop environment, and the platform handles all the AI infrastructure behind the scenes.
+
+### Key concepts:
+- **Anna Desktop** — The main application users install on their PC. It provides a workspace with an AI assistant and a marketplace of apps.
+- **Anna Apps** — Small web apps (HTML/JS/CSS) that run inside Anna's desktop environment. They can call AI models, invoke backend tools, and interact with the user through a custom UI.
+- **Executas** — Backend plugins written in Python, Node.js, or Go. They run server-side (or locally during development) and perform the heavy lifting — API calls, data processing, file operations, etc. An Executa is essentially a "tool" that the AI can use.
+- **Anna CLI** (`anna-app`) — The command-line tool developers use to scaffold, develop, test, and publish apps.
+
+### How it all fits together:
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   Anna Desktop App                    │
+│                                                       │
+│  ┌─────────────────────┐  ┌────────────────────────┐ │
+│  │   Your App's UI      │  │   Anna AI Assistant    │ │
+│  │   (bundle/)          │  │   (built-in chat)      │ │
+│  │                      │  │                         │ │
+│  │  index.html          │  │  Can use your Executa  │ │
+│  │  app.js              │  │  tools automatically   │ │
+│  │  style.css           │  │                         │ │
+│  └──────────┬───────────┘  └────────────┬───────────┘ │
+│             │                           │              │
+│             ▼                           ▼              │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │              Anna Platform APIs                   │ │
+│  │                                                   │ │
+│  │  anna.tools.invoke()  →  Calls your Executa      │ │
+│  │  anna.llm.complete()  →  Calls AI models (free)  │ │
+│  │  anna.window.*        →  Controls the UI window  │ │
+│  └──────────────────────────────────────────────────┘ │
+│                          │                             │
+│                          ▼                             │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │           Your Executa (Python/Node/Go)           │ │
+│  │                                                   │ │
+│  │  Runs your backend logic:                         │ │
+│  │  - API calls, data processing, git clone, etc.   │ │
+│  │  - Communicates via JSON-RPC over stdin/stdout    │ │
+│  └──────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+### Why build on Anna instead of a standalone app?
+1. **Free AI** — Anna provides hosted LLM access via `anna.llm.complete()`. Your users don't need their own API keys.
+2. **Zero deployment** — No need to set up servers, domains, or hosting. Anna hosts your frontend and runs your backend.
+3. **Distribution** — Publish to the Anna app marketplace and get discovered by users instantly.
+4. **Agent integration** — Your Executa tools can be used by the Anna AI assistant autonomously, even without your custom UI.
+
+---
+
+## How to Set Up Anna on Your PC
+
+### Prerequisites
+- **Windows 10/11** (Mac and Linux also supported)
+- **Node.js** (v18 or newer) — [Download](https://nodejs.org/)
+- **Python 3.10+** and **uv** (Python package manager) — [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+- **Git** — [Download](https://git-scm.com/downloads)
+
+### Step 1: Install the Anna Desktop App
+Download and install the Anna desktop application from [anna.partners](https://anna.partners). Create an account and sign in.
+
+### Step 2: Install the Anna CLI
+Open PowerShell and run:
+```powershell
+npm install -g @anna-ai/cli
+```
+
+If you get a `PSSecurityException` error on Windows, first run:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### Step 3: Log in to the CLI
+Authenticate your terminal with your Anna account:
+```powershell
+anna-app login --host https://anna.partners
+```
+This opens a browser window where you confirm the login. After that, all CLI commands are authenticated.
+
+### Step 4: Verify installation
+```powershell
+anna-app --version
+```
+You should see something like `v0.1.30` or newer.
+
+---
+
+## How to Build Apps for Anna (General Guide)
+
+### Project Structure
+
+Every Anna App follows this structure:
+
+```
+my-app/
+├── bundle/                    # Frontend (what users see)
+│   ├── index.html             # Main HTML page
+│   ├── app.js                 # JavaScript logic
+│   └── style.css              # Styles
+├── executas/
+│   └── my-tool/               # Backend plugin
+│       ├── my_tool.py         # Your Python code
+│       ├── executa.json       # Tool identity config
+│       └── pyproject.toml     # Python build config
+└── manifest.json              # App configuration
+```
+
+### Step 1: Create the manifest
+
+`manifest.json` is the heart of your app. It declares what permissions you need and what Executas you use:
+
+```json
+{
+  "schema": 2,
+  "permissions": ["tools.invoke"],
+  "required_executas": [
+    {
+      "tool_id": "bundled:my-tool",
+      "min_version": "0.1.0",
+      "version": "latest"
+    }
+  ],
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html"
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "My App",
+        "default": true,
+        "entry": "index.html",
+        "min_size": { "w": 460, "h": 600 },
+        "default_size": { "w": 800, "h": 800 },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true
+      }
+    ],
+    "host_api": {
+      "llm": ["complete"],
+      "window": ["set_title"]
+    }
+  }
+}
+```
+
+> **Warning:** Do NOT add any extra fields to the manifest. Anna's backend uses strict validation and will crash with a 500 error on unknown keys.
+
+### Step 2: Build the Frontend
+
+Your frontend is plain HTML/JS/CSS. The key is importing the Anna SDK and connecting to the runtime:
+
+```javascript
+import { AnnaAppRuntime } from "/static/anna-apps/_sdk/latest/index.js";
+
+async function init() {
+  const anna = await AnnaAppRuntime.connect();
+
+  // Call your backend tool
+  const result = await anna.tools.invoke({
+    tool_id: "bundled:my-tool",
+    method: "my_method",
+    args: { key: "value" }
+  });
+
+  // Call the AI (free, no API key needed)
+  const llmResult = await anna.llm.complete({
+    messages: [{ role: "user", content: "Explain this..." }],
+    max_tokens: 2000
+  });
+
+  // The AI response text is at:
+  const text = llmResult.content?.text;
+}
+
+init();
+```
+
+### Step 3: Build the Executa (Python Backend)
+
+Create `executa.json`:
+```json
+{
+  "slug": "my-tool",
+  "name": "My Tool",
+  "version": "0.1.0",
+  "executa_type": "tool",
+  "tool_id": "tool-my-app-my-tool-1",
+  "type": "python",
+  "enabled": true
+}
+```
+
+Create `pyproject.toml`:
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tool-my-app-my-tool-1"
+version = "0.1.0"
+dependencies = ["requests"]
+
+[project.scripts]
+tool-my-app-my-tool-1 = "my_tool:main"
+```
+
+Your Python script communicates via JSON-RPC over stdin/stdout. The critical response format is:
+```python
+# Tool results MUST use this exact schema:
+return {
+    "success": True,
+    "tool": tool_name,
+    "data": { "your_key": "your_value" }
+}
+
+# Do NOT use: { "content": [...] }  — this will be rejected!
+```
+
+### Step 4: Run locally
+```powershell
+anna-app dev --slug my-app
+```
+
+### Step 5: Publish
+
+```powershell
+# 1. Publish the Executa
+cd executas/my-tool
+anna-app executa publish
+
+# 2. Update manifest.json with the real tool_id from step 1
+
+# 3. Push the app
+cd ../..
+anna-app apps push
+
+# 4. Cut a version
+anna-app apps cut 0.1.0
+
+# 5. Submit for review
+anna-app apps submit-review my-app
+
+# 6. After approval, release it
+anna-app apps release 0.1.0
+```
+
+---
+---
+
+# Part B: GitProject Analyzer — Development Journey
+
 
 ## 1. Initial Environment Setup
 

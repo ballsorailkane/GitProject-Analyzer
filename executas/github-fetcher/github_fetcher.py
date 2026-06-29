@@ -2,6 +2,9 @@ import sys
 import json
 import re
 import requests
+import subprocess
+import tempfile
+import os
 
 GITHUB_HEADERS = {
     "User-Agent": "GitProject-Analyzer-AnnaApp/1.0",
@@ -53,7 +56,50 @@ def fetch_readme(owner, repo):
         pass
     return None
 
-def build_prompt(repo_data, languages, tree, readme):
+def clone_and_read_repo(url):
+    local_context = ""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        try:
+            # Shallow clone
+            subprocess.run(["git", "clone", "--depth", "1", url, temp_dir], check=True, capture_output=True)
+            
+            ignored_dirs = {".git", "node_modules", "venv", "__pycache__", "build", "dist", ".idea", ".vscode", "assets", "images"}
+            files_read = 0
+            max_files = 15
+            max_chars = 15000
+            chars_read = 0
+            
+            for root, dirs, files in os.walk(temp_dir):
+                dirs[:] = [d for d in dirs if d not in ignored_dirs]
+                
+                for file in files:
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.tar', '.gz', '.mp4', '.mp3', '.lock', '.apk', '.exe', '.dll')):
+                        continue
+                        
+                    file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, temp_dir)
+                    
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read(3000)
+                            if content.strip():
+                                local_context += f"--- {rel_path} ---\n{content}\n\n"
+                                files_read += 1
+                                chars_read += len(content)
+                        
+                        if files_read >= max_files or chars_read >= max_chars:
+                            break
+                    except Exception:
+                        pass
+                
+                if files_read >= max_files or chars_read >= max_chars:
+                    break
+        except Exception as e:
+            local_context = f"(Failed to clone repository locally: {e})"
+            
+    return local_context
+
+def build_prompt(repo_data, languages, tree, readme, local_context):
     top_files = [t["path"] for t in tree if "/" not in t["path"]][:30]
     file_list = "\n".join(f"  - {f}" for f in top_files) if top_files else "  (not available)"
 
@@ -83,6 +129,10 @@ def build_prompt(repo_data, languages, tree, readme):
 
 # README Context (truncated)
 {readme_text}
+
+# Local Source Code Context
+The following are snippets of key source code files extracted directly from the repository. Use these to understand the architecture and implementation details:
+{local_context}
 
 Please provide:
 1. **Architecture Overview**: Briefly describe the project architecture based on the file structure.
@@ -120,8 +170,9 @@ def handle_request(req):
             branch = repo_data.get("default_branch", "main")
             tree = fetch_tree(owner, repo, branch)
             readme = fetch_readme(owner, repo)
+            local_context = clone_and_read_repo(url)
             
-            prompt = build_prompt(repo_data, languages, tree, readme)
+            prompt = build_prompt(repo_data, languages, tree, readme, local_context)
             
             result_dict = {
                 "prompt": prompt,

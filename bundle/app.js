@@ -63,21 +63,13 @@ async function init() {
       
       loadingText.textContent = "Analyzing project with Anna AI...";
       
-      // --- HACK START ---
-      // Since anna.llm.complete is currently returning a 502 Bad Gateway from the platform,
-      // we will bypass the LLM entirely and just display the raw data that the Executa successfully fetched!
-      const rawExtractedData = fetchResult.prompt
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-        
-      analysisContentEl.innerHTML = `
-        <div style="background: rgba(255, 50, 50, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(255,50,50,0.3);">
-          <strong>⚠️ Anna LLM API is down (502 Bad Gateway)</strong><br>
-          Bypassing AI analysis. Displaying the raw data successfully extracted from GitHub by your Executa:
-        </div>
-        <pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: #e2e8f0; line-height: 1.5;">${rawExtractedData}</pre>
-      `;
-      // --- HACK END ---
+      const llmResult = await anna.llm.complete({
+        messages: [{ role: "user", content: fetchResult.prompt }],
+        max_tokens: 4000
+      });
+      
+      const responseText = llmResult.content?.text || llmResult.text || llmResult.content || "No response received.";
+      analysisContentEl.innerHTML = parseMarkdown(responseText);
       
       loadingState.style.display = 'none';
       resultsSection.style.display = 'block';

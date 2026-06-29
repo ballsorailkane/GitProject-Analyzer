@@ -5,7 +5,7 @@
   ],
   "required_executas": [
     {
-      "tool_id": "bundled:github-fetcher",
+      "tool_id": "tool-orailkane-github-fetcher-khq97duy",
       "min_version": "0.1.0",
       "version": "latest"
     }

@@ -125,7 +125,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tool-gitproject-analyzer-github-fetcher-1"
+name = "tool-orailkane-github-fetcher-khq97duy"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

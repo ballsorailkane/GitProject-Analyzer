@@ -520,3 +520,29 @@ anna-app apps release 0.1.0
 5. **Use `anna-app executa publish` (without `--publish`)** if the `--publish` flag throws a 500 error. You can make it public later.
 6. **Folder names with spaces** cause issues with the CLI auto-slug generator. Always pass `--slug` explicitly.
 
+---
+
+## 9. Packaging for Binary Distribution
+
+Although the app was published and functional locally, other users installing the app reported an error: `"no Executa Agent is currently online for this user"`. 
+This happened because the Executa was published as a `"Server"` distribution type. For other users to actually run your Python Executa without installing Python and all dependencies manually, we needed to configure `"Binary"` distribution.
+
+Following the Anna platform guidelines, we set up an automated multi-platform binary packaging workflow:
+
+### A. Update to Real Tool ID
+First, we updated `executas/github-fetcher/executa.json` and `pyproject.toml` to replace the local `bundled:github-fetcher` ID with the real `tool_id` assigned by the platform (`tool-orailkane-github-fetcher-khq97duy`).
+
+### B. The Packaging Script (`package_binary.sh`)
+We created a bash script that uses `uv` and `PyInstaller` to bundle the entire Python environment and `github_fetcher.py` script into a single executable file. It automatically:
+1. Detects the OS and architecture (`darwin-arm64`, `windows-x86_64`, etc.)
+2. Builds the single-file executable using PyInstaller.
+3. Packages the executable into a `.tar.gz` archive along with a `manifest.json` that tells the Anna Agent exactly which file inside the archive is the entrypoint.
+
+### C. GitHub Actions Workflow
+Since PyInstaller cannot cross-compile (e.g., you can't build a Mac binary on a Windows machine), we created `.github/workflows/build-executa-binary.yml`.
+This workflow automatically runs on `windows-latest`, `macos-14` (Apple Silicon), `macos-15-intel`, and `ubuntu-latest`. It runs the packaging script on all 4 platforms simultaneously, generates the `.tar.gz` and `.sha256` checksums, and uploads them all to a GitHub Release.
+
+### D. Final Platform Configuration
+Once the GitHub Release is built, the final step is to log into the Anna Developer Console (`More -> Advanced -> Executa -> Your Tool`), switch the distribution from `Server` to `Binary`, and paste the GitHub Release `.tar.gz` download URLs for each platform. 
+
+This enables true "one-click install" for any user who downloads the GitProject Analyzer.
